@@ -1,39 +1,85 @@
-import React from 'react'
+import React, {useState, useCallback} from 'react'
 
 import { Link, useNavigate } from 'react-router-dom'
 
+const initalDetail = {
+userName: '',
+email: '',
+password: ''
+}
+
 function SignUp() {
+  const [userDetail, setUserDetail] = useState(Object.assign({}, initalDetail))
+  const [error, setError] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const navigate = useNavigate()
+
+  const handleChangeDetails = useCallback((key, value) => {
+    const updateDetail = Object.assign({}, userDetail)
+    updateDetail[key] = value
+    setUserDetail(updateDetail)
+  }, [userDetail])
+
+  const handleSubmit = useCallback(async(e) => {
+    e.preventDefault()
+    try {
+      setLoading(true)
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userDetail)
+      })
+      const data = await res.json()
+      if (data.success === false) {
+        setLoading(false);
+        setError(data.message)
+        return
+      }
+      setLoading(false)
+      setError(null)
+      navigate('/sign-in')
+    } catch (error) {
+      setLoading(false)
+      setError(error.message)
+    }
+  }, [userDetail])
+
   return (
     <div className='p-3 max-w-lg mx-auto'>
       <h1 className='text-3xl text-center font-semibold my-7'>SignUp</h1>
-      <form onSubmit={() => {}} className='flex flex-col gap-4'>
+      <form onSubmit={handleSubmit} className='flex flex-col gap-4'>
         <input
           type='text'
           placeholder='username'
           className='border p-3 rounded-lg'
-          id='username'
-          // onChange={handleChange}
+          id='userName'
+          value={userDetail.userName}
+          onChange={(e) => handleChangeDetails('userName', e.target.value)}
         />
         <input
           type='email'
           placeholder='email'
           className='border p-3 rounded-lg'
           id='email'
-          // onChange={handleChange}
+          value={userDetail.email}
+          onChange={(e) => handleChangeDetails('email', e.target.value)}
         />
         <input
           type='password'
           placeholder='password'
           className='border p-3 rounded-lg'
           id='password'
-          // onChange={handleChange}
+          value={userDetail.password}
+          onChange={(e) => handleChangeDetails('password', e.target.value)}
         />
 
         <button
-          // disabled={loading}
+          disabled={loading}
           className='bg-slate-700 text-white p-3 rounded-lg uppercase hover:opacity-95 disabled:opacity-80'
         >
-          {/* {loading ? 'Loading...' : 'Sign Up'} */}
+          {loading ? 'Loading...' : 'Sign Up'}
         </button>
         {/* <OAuth/> */}
       </form>
@@ -43,7 +89,7 @@ function SignUp() {
           <span className='text-blue-700'>Sign in</span>
         </Link>
       </div>
-      {/* {error && <p className='text-red-500 mt-5'>{error}</p>} */}
+      {error && <p className='text-red-500 mt-5'>{error}</p>}
       </div>
   )
 }

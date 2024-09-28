@@ -1,5 +1,5 @@
-import { useRef, useState, useEffect } from 'react'
-import { useSelector } from 'react-redux'
+import { useRef, useState, useEffect, useCallback } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 
 import {
   getDownloadURL,
@@ -8,22 +8,25 @@ import {
   uploadBytesResumable,
 } from 'firebase/storage'
 import { app } from '../firebase'
+import { updateUserFailure, updateUserStart, updateUserSuccess } from '../redux/user/userSlice'
 
 function Profile() {
+	const dispatch = useDispatch()
 	const { currentUser, loading, error } = useSelector((state) => state.user)
 	const fileRef = useRef(null)
   const [file, setFile] = useState(undefined)
   const [filePerc, setFilePerc] = useState(0)
   const [fileUploadError, setFileUploadError] = useState(false)
   const [formData, setFormData] = useState({})
-
+	const [updateSuccess, setUpdateSuccess] = useState(false)
+	
   useEffect(() => {
     if (file) {
       handleFileUpload(file)
     }
   }, [file])
 
-  const handleFileUpload = (file) => {
+  const handleFileUpload = useCallback((file) => {
     const storage = getStorage(app)
     const fileName = new Date().getTime() + file.name
     const storageRef = ref(storage, fileName)
@@ -45,16 +48,40 @@ function Profile() {
         )
       }
     )
-  }
+  }, [formData])
   
-  const handleChange = (e) => {
+  const handleChange = useCallback((e) => {
     setFormData({ ...formData, [e.target.id]: e.target.value })
-  }
+  }, [formData])
+
+	const handleSubmit = useCallback(async(e) => {
+    e.preventDefault()
+    try {
+      dispatch(updateUserStart())
+      const res = await fetch(`/api/user/update/${currentUser._id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      })
+      const data = await res.json()
+      if (data.success === false) {
+        dispatch(updateUserFailure(data.message))
+        return
+      }
+
+      dispatch(updateUserSuccess(data))
+      setUpdateSuccess(true)
+    } catch (error) {
+      dispatch(updateUserFailure(error.message))
+    }
+  }, [currentUser, formData])
 
 	return (
 		<div className="p-3 max-w-lg mx-auto">
 			<h1 className="text-3xl font-semibold text-center my-7">Profile</h1>
-			<form onSubmit={() => {}} className="flex flex-col gap-4">
+			<form onSubmit={handleSubmit} className="flex flex-col gap-4">
 				<input
 					onChange={(e) => setFile(e.target.files[0])}
 					type="file"
@@ -132,6 +159,12 @@ function Profile() {
 					Sign out
 				</span>
 			</div>
+
+			<p className='text-red-700 mt-5'>{error ? error : ''}</p>
+      <p className='text-green-700 mt-5'>
+        {updateSuccess ? 'User is updated successfully!' : ''}
+      </p>
+
 		</div>
 	)
 }

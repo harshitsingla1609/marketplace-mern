@@ -7,7 +7,8 @@ import Home from './pages/Home';
 import Profile from './pages/Profile';
 import SignIn from './pages/SignIn';
 import SignUp from './pages/SignUp';
-import CreateListing from './pages/Listing';
+import CreateListing from './pages/CreateListing';
+import Listing from './pages/Listing';
 
 const App = () => {
 	return (

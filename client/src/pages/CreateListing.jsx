@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import {
   getDownloadURL,
   getStorage,
@@ -6,12 +6,13 @@ import {
   uploadBytesResumable,
 } from 'firebase/storage'
 import { useSelector } from 'react-redux'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 
 import { app } from '../firebase'
 
 const CreateListing = () => {
   const { currentUser } = useSelector((state) => state.user)
+  const params = useParams()
   const navigate = useNavigate()
   const [files, setFiles] = useState([])
   const [formData, setFormData] = useState({
@@ -32,6 +33,25 @@ const CreateListing = () => {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState(false)
   const [loading, setLoading] = useState(false)
+
+  const isEditMode = useMemo(() => !!params?.listingId, [params])
+  
+  useEffect(() => {
+    if (params?.listingId) {
+      fetchListing()
+    }
+  }, [params.listingId])
+
+  const fetchListing = useCallback(async() => {
+    const listingId = params.listingId
+    const res = await fetch(`/api/listing/get/${listingId}`)
+    const data = await res.json()
+    if (data.success === false) {
+      console.log(data.message)
+      return
+    }
+    setFormData(data)
+  }, [params])
 
   const handleChange = useCallback((e) => {
     if (e.target.id === 'sale' || e.target.id === 'rent') {
@@ -72,7 +92,7 @@ const CreateListing = () => {
   }, [formData])
 
   const handleSubmit = useCallback(async(e) => {
-    e.preventDefault();
+    e.preventDefault()
     try {
       if (formData.imageUrls.length < 1)
         return setError('You must upload at least one image')
@@ -80,7 +100,7 @@ const CreateListing = () => {
         return setError('Discount price must be lower than regular price')
       setLoading(true)
       setError(false)
-      const res = await fetch('/api/listing/create', {
+      const res = await fetch(`/api/listing/${isEditMode ? `update/${params.listingId}`: 'create'}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -91,7 +111,7 @@ const CreateListing = () => {
         })
       })
       const data = await res.json()
-      setLoading(false);
+      setLoading(false)
       if (data.success === false) {
         setError(data.message)
       }
@@ -100,7 +120,7 @@ const CreateListing = () => {
       setError(error.message)
       setLoading(false)
     }
-  }, [formData, currentUser])
+  }, [isEditMode, params, formData, currentUser])
   
   const storeImage = useCallback(async(file) => {
     return new Promise((resolve, reject) => {
@@ -157,7 +177,7 @@ const CreateListing = () => {
   return (
     <main className='p-3 max-w-4xl mx-auto'>
       <h1 className='text-3xl font-semibold text-center my-7'>
-        Create a Listing
+        {isEditMode ? 'Edit a Listing': 'Create a Listing'}
       </h1>
       <form onSubmit={handleSubmit} className='flex flex-col sm:flex-row gap-4'>
         <div className='flex flex-col gap-4 flex-1'>
@@ -362,7 +382,7 @@ const CreateListing = () => {
             disabled={loading || uploading}
             className='p-3 bg-slate-700 text-white rounded-lg uppercase hover:opacity-95 disabled:opacity-80'
           >
-            {loading ? 'Creating...' : 'Create listing'}
+            {loading ? 'Creating...' : isEditMode ? 'Edit Listing': 'Create listing'}
           </button>
           {error && <p className='text-red-700 text-sm'>{error}</p>}
         </div>

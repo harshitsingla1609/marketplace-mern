@@ -38,7 +38,7 @@ const CreateListing = () => {
       setFormData({
         ...formData,
         type: e.target.id,
-      });
+      })
     }
 
     if (
@@ -49,7 +49,7 @@ const CreateListing = () => {
       setFormData({
         ...formData,
         [e.target.id]: e.target.checked,
-      });
+      })
     }
 
     if (
@@ -60,7 +60,7 @@ const CreateListing = () => {
       setFormData({
         ...formData,
         [e.target.id]: e.target.value,
-      });
+      })
     }
   }, [formData])
 
@@ -69,15 +69,63 @@ const CreateListing = () => {
       ...formData,
       imageUrls: formData.imageUrls.filter((_, i) => i !== index),
     })
-  }, [])
+  }, [formData])
 
   const handleSubmit = useCallback(() => {
 
   }, [])
   
-  const handleImageSubmit = useCallback(() => {
-
+  const storeImage = useCallback(async(file) => {
+    return new Promise((resolve, reject) => {
+      const storage = getStorage(app)
+      const fileName = new Date().getTime() + file.name
+      const storageRef = ref(storage, fileName)
+      const uploadTask = uploadBytesResumable(storageRef, file)
+      uploadTask.on(
+        'state_changed',
+        (snapshot) => {
+          const progress =
+            (snapshot.bytesTransferred / snapshot.totalBytes) * 100
+        },
+        (error) => {
+          reject(error)
+        },
+        () => {
+          getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
+            resolve(downloadURL)
+          })
+        }
+      )
+    })
   }, [])
+
+  const handleImageSubmit = useCallback(() => {
+    if (files.length > 0 && files.length + formData.imageUrls.length < 7) {
+      setUploading(true)
+      setImageUploadError(false)
+      const promises = []
+
+      for (let i = 0; i < files.length; i++) {
+        promises.push(storeImage(files[i]))
+      }
+      Promise.all(promises)
+        .then((urls) => {
+          setFormData({
+            ...formData,
+            imageUrls: formData.imageUrls.concat(urls)
+          })
+          setImageUploadError(false)
+          setUploading(false)
+        })
+        .catch((err) => {
+          setImageUploadError('Image upload failed (2 mb max per image)')
+          setUploading(false)
+        })
+    } else {
+      setImageUploadError('You can only upload 6 images per listing')
+      setUploading(false)
+    }
+  }, [files, formData, storeImage])
 
   return (
     <main className='p-3 max-w-4xl mx-auto'>

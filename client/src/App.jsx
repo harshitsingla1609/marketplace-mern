@@ -9,6 +9,7 @@ import SignIn from './pages/SignIn';
 import SignUp from './pages/SignUp';
 import CreateListing from './pages/CreateListing';
 import Listing from './pages/Listing';
+import Search from './pages/Search'
 
 const App = () => {
 	return (
@@ -20,6 +21,7 @@ const App = () => {
 				<Route path="/sign-up" element={<SignUp />} />
 				<Route path="/about" element={<About />} />
 				<Route path='/listing/:listingId' element={<Listing />} />
+				<Route path='/search' element={<Search />} />
 
 				<Route element={<PrivtaeRoute />}>
 					<Route path="/profile" element={<Profile />} />
